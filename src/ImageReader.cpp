@@ -21,8 +21,8 @@ ImageReader::ImageReader(std::string image_folder,
 cv::Mat ImageReader::readImage(int image_index)
 {
     // Read image from disk
-    cv::Mat image = cv::imread(m_files.at(image_index), CV_LOAD_IMAGE_GRAYSCALE);
-        
+    cv::Mat image = cv::imread(m_files.at(image_index), cv::IMREAD_GRAYSCALE);  
+          
     if(!image.data)
     {
         std::cout << "ERROR READING IMAGE " << m_files.at(image_index) << std::endl;

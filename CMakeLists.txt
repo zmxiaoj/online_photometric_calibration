@@ -33,7 +33,7 @@ if(APPLE)
   # give the homebrew path as hint, since the formula is keg-only
   find_package(OpenCV 2.4 REQUIRED HINTS /usr/local/opt/opencv@2)
 else()
-  find_package(OpenCV 2.4 REQUIRED)
+  find_package(OpenCV REQUIRED)
 endif()
 find_package(Threads REQUIRED)
 
