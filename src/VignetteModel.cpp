@@ -25,6 +25,12 @@ VignetteModel::VignetteModel(double v1,double v2,double v3,int image_width,int i
     m_max_radius = sqrt((image_width/2)*(image_width/2) + (image_height/2)*(image_height/2));
 }
 
+/**
+ * @brief normalize the pixel location to [0, 1] by radius
+ * 
+ * @param xy_location 
+ * @return double 
+ */
 double VignetteModel::getNormalizedRadius(cv::Point2f xy_location)
 {
     double x = xy_location.x;
@@ -39,6 +45,12 @@ double VignetteModel::getNormalizedRadius(cv::Point2f xy_location)
     return radius;
 }
 
+/**
+ * @brief get the vignette factor of the pixel
+ * 
+ * @param xy_location 
+ * @return double 
+ */
 double VignetteModel::getVignetteFactor(cv::Point2f xy_location)
 {
     double r = getNormalizedRadius(xy_location);

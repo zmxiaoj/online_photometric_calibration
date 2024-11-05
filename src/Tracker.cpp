@@ -29,6 +29,8 @@ void Tracker::trackNewFrame(cv::Mat input_image,double gt_exp_time)
     // Correct the input image based on the current response and vignette estimate (exposure time not known yet)
     // Todo: move to class member
     cv::Mat corrected_frame = input_image.clone();
+
+    // correct input image by response & vignette
     photometricallyCorrectImage(corrected_frame);
  
     // Empty database -> First frame - extract features and push them back
@@ -292,6 +294,12 @@ std::vector<cv::Point2f> Tracker::extractFeatures(cv::Mat frame,std::vector<cv::
 }
 
 /**
+ * @brief Extract new features from the frame & visualize
+ */
+std::vector<cv::Point2f> extractFeaturesAndVisualize(cv::Mat frame,std::vector<cv::Point2f> old_features)
+{}
+
+/**
  * Note: For this function, it is assumed that x,y lies within the image!
  */
 double Tracker::bilinearInterpolateImage(cv::Mat image,double x,double y)
@@ -373,6 +381,7 @@ std::vector<int> Tracker::checkLocationValidity(std::vector<cv::Point2f> points)
 // Todo: change parameter type to reference (or const reference)
 void Tracker::initialFeatureExtraction(cv::Mat input_image,cv::Mat gradient_image,double gt_exp_time)
 {
+    // extract more features
     std::vector<cv::Point2f> old_f;
     std::vector<cv::Point2f> feature_locations = extractFeatures(input_image,old_f);
     std::vector<int> validity_vector = checkLocationValidity(feature_locations);
@@ -422,6 +431,50 @@ void Tracker::computeGradientImage(cv::Mat input_image,cv::Mat &gradient_image)
     cv::addWeighted( grad_x, 0.5, grad_y, 0.5, 0, gradient_image );
 }
 
+/** 
+ * @brief compute gradient image and visualize it
+ * 
+ */
+void Tracker::computeGradientImageAndVisualize(cv::Mat input_image,cv::Mat &gradient_image, std::string saved_path)
+{
+    // Blur the input image a little and apply discrete 3x3 sobel filter in x,y directions to obtain a gradient estimate
+    // Todo: change to class member
+    cv::Mat blurred_image;
+    cv::GaussianBlur(input_image, blurred_image, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT);
+    cv::imshow("blurred image", blurred_image);
+    cv::waitKey(0);
+    std::string blurred_image_path = saved_path + "blurred_image.png";
+    cv::imwrite(blurred_image_path, blurred_image);
+    
+    // Todo: change to class member
+    cv::Mat grad_x,grad_y;
+    cv::Sobel(blurred_image, grad_x, CV_16S, 1, 0, 3, 1.0, 0, cv::BORDER_DEFAULT);
+    cv::Sobel(blurred_image, grad_y, CV_16S, 0, 1, 3, 1.0, 0, cv::BORDER_DEFAULT);
+    // convert gradients to absolute values
+    cv::convertScaleAbs(grad_x, grad_x);
+    cv::imshow("grad_x", grad_x);
+    cv::waitKey(0);
+    std::string grad_x_path = saved_path + "grad_x.png";
+    cv::imwrite(grad_x_path, grad_x);
+
+    cv::convertScaleAbs(grad_y, grad_y);
+    cv::imshow("grad_y", grad_y);
+    cv::waitKey(0);
+    std::string grad_y_path = saved_path + "grad_y.png";
+    cv::imwrite(grad_y_path, grad_y);
+    
+    cv::addWeighted( grad_x, 0.5, grad_y, 0.5, 0, gradient_image );
+    cv::imshow("gradient image", gradient_image);
+    cv::waitKey(0);
+    std::string gradient_image_path = saved_path + "gradient_image.png";
+    cv::imwrite(gradient_image_path, gradient_image);
+}
+
+/**
+ * @brief correct frame by response & vignette
+ * 
+ * @param corrected_frame 
+ */
 void Tracker::photometricallyCorrectImage(cv::Mat &corrected_frame)
 {
     for(int r = 0;r < corrected_frame.rows;r++)
@@ -432,6 +485,7 @@ void Tracker::photometricallyCorrectImage(cv::Mat &corrected_frame)
             double radiance = m_database->m_response_estimate.removeResponse(o_value);
             double vig = m_database->m_vignette_estimate.getVignetteFactor(cv::Point2f(c,r));
             radiance /= vig;
+            // clamp to [0, 255]
             if(radiance > 255)radiance = 255;
             if(radiance < 0)radiance = 0;
             corrected_frame.at<uchar>(r,c) = (uchar)radiance;

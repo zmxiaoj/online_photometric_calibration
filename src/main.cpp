@@ -398,6 +398,7 @@ int main(int argc, char** argv)
     string line;
     double min_time = 10000.0;
     double max_time = -10000.0;
+    // load exposure time gt & get min/max
     if (exposure_gt_file_handle.is_open())
     {
         while(getline(exposure_gt_file_handle,line))
@@ -419,6 +420,7 @@ int main(int argc, char** argv)
     }
     exposure_gt_file_handle.close();
 
+    // normalize gt exposures to range [0,1]
     for(int k = 0;k < gt_exp_times.size();k++)
     {    
         //normalize gt exposures to range [0,1]

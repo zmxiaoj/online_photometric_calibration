@@ -87,6 +87,9 @@ private:
      * for the 256 image output intensities.
      * This vector is stored here for efficiency since it is not straightforward to invert the response 
      * given only the Grossberg parameters.
+     * 
+     * key-value: output intensity -> inverse response
+     *            [0, 255] -> [0, 255]
      */
     std::vector<double> m_inverse_response_vector;
     

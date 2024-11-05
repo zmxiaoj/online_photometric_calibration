@@ -70,6 +70,24 @@ public:
      // Todo: change param to reference
     void trackNewFrame(cv::Mat frame,double gt_exp_time);
     
+    /**
+     * @brief Compute gradient image & visualize 
+     * 
+     * @param [in] input_image
+     * @param [out] gradient_image
+     * @param [in] saved_path
+     */
+    void computeGradientImageAndVisualize(cv::Mat input_image, cv::Mat &gradient_image, std::string saved_path);
+
+    /**
+     * @brief Extract new features from the frame & visualize
+     * 
+     * @param [in] frame 
+     * @param [in] old_features 
+     * @return std::vector<cv::Point2f> 
+     */
+    std::vector<cv::Point2f> extractFeaturesAndVisualize(cv::Mat frame,std::vector<cv::Point2f> old_features);
+
 private:
     
     /**

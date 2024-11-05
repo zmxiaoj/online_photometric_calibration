@@ -51,7 +51,7 @@ public:
     Feature* m_prev_feature;
     
     /*
-     * Link to the feature in the previous image corresponding to the same scene point
+     * Link to the feature in the next image corresponding to the same scene point
      * (Obtained from tracking)
      */
     Feature* m_next_feature;

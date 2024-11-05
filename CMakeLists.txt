@@ -82,6 +82,11 @@ add_executable(online_pcalib_demo src/main.cpp)
 target_link_libraries(online_pcalib_demo
   online_pcalib)
 
+# tracker demo
+add_executable(tracker_demo test/tracker_demo.cpp)
+target_link_libraries(tracker_demo
+  online_pcalib)
+
 # install rules
 install (TARGETS online_pcalib online_pcalib_demo
   ARCHIVE DESTINATION lib
