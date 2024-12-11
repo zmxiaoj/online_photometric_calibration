@@ -177,6 +177,13 @@ void Tracker::trackNewFrame(cv::Mat input_image,double gt_exp_time)
 }
 
 // Todo: change both types to reference
+/**
+ * @brief extract features from frame
+ * 
+ * @param frame 
+ * @param old_features 
+ * @return std::vector<cv::Point2f> 
+ */
 std::vector<cv::Point2f> Tracker::extractFeatures(cv::Mat frame,std::vector<cv::Point2f> old_features)
 {
     std::vector<cv::Point2f> new_features;
@@ -296,8 +303,153 @@ std::vector<cv::Point2f> Tracker::extractFeatures(cv::Mat frame,std::vector<cv::
 /**
  * @brief Extract new features from the frame & visualize
  */
-std::vector<cv::Point2f> extractFeaturesAndVisualize(cv::Mat frame,std::vector<cv::Point2f> old_features)
-{}
+std::vector<cv::Point2f> Tracker::extractFeaturesAndVisualize(cv::Mat frame, std::vector<cv::Point2f>& old_features, std::string saved_path)
+{
+    // convert input frame to color frame for visualize features
+    cv::Mat color_frame;
+    cv::cvtColor(frame, color_frame, cv::COLOR_GRAY2BGR);
+    
+    std::vector<cv::Point2f> new_features;
+
+    std::cout << "Number of old points: " << old_features.size() << std::endl;
+    std::cout << "Number of total points: " << m_max_nr_active_features << std::endl;
+    // No new features have to be extracted
+    if(old_features.size() >= m_max_nr_active_features)
+    {
+        return new_features;
+    }
+    
+    int nr_features_to_extract = static_cast<int>(m_max_nr_active_features-old_features.size());
+    std::cout << "Number of features to extract: " << nr_features_to_extract << std::endl;
+
+    // Build spatial distribution map to check where to extract features
+    int cells_r = 10;
+    int cells_c = 10;
+    
+    double im_width  = m_database->m_image_width;
+    double im_height = m_database->m_image_height;
+        
+    int cell_height = floor(im_height / cells_r);
+    int cell_width  = floor(im_width  / cells_c);
+
+    // Todo: change to class member
+    int pointDistributionMap[cells_r][cells_c];
+    for(int r = 0;r < cells_r;r++)
+    {
+        for(int c = 0;c < cells_c;c++)
+        {
+            pointDistributionMap[r][c] = 0;
+        }
+    }
+    
+    // Build the point distribution map to check where features need to be extracted mostly
+    for(int p = 0;p < old_features.size();p++)
+    {
+        double x_value = old_features.at(p).x;
+        double y_value = old_features.at(p).y;
+        
+        int c_bin = x_value / cell_width;
+        if(c_bin >= cells_c)
+            c_bin = cells_c - 1;
+        
+        int r_bin = y_value / cell_height;
+        if(r_bin >= cells_r)
+            r_bin = cells_r - 1;
+        
+        pointDistributionMap[r_bin][c_bin]++;
+    }
+    
+    // Identify empty cells
+    std::vector<int> empty_row_indices;
+    std::vector<int> empty_col_indices;
+    
+    for(int r = 0;r < cells_r;r++)
+    {
+        for(int c = 0;c < cells_c;c++)
+        {
+            if(pointDistributionMap[r][c] == 0)
+            {
+                empty_row_indices.push_back(r);
+                empty_col_indices.push_back(c);
+            }
+        }
+    }
+
+    // Todo: empty_col_indices might be 0!!!
+    // Todo: Another bad case is: only one cell is empty and all other cells have only 1 feature inside,
+    // Todo: then all the features to extract will be extracted from the single empty cell.
+    int points_per_cell = ceil(nr_features_to_extract / (empty_col_indices.size()*1.0));
+
+    std::cout << "Number of empty cells: " << empty_col_indices.size() << std::endl;
+    std::cout << "Number of points per cell: " << points_per_cell << std::endl;
+    
+    // Extract "points per cell" features from each empty cell
+    for(int i = 0;i < empty_col_indices.size();i++)
+    {
+        // Select random cell from where to extract features
+        int random_index = rand() % empty_row_indices.size();
+        
+        // Select row and col
+        int selected_row = empty_row_indices.at(random_index);
+        int selected_col = empty_col_indices.at(random_index);
+        
+        // Define the region of interest where to detect a feature
+        cv::Rect ROI(selected_col * cell_width,selected_row * cell_height,cell_width,cell_height);
+        
+        // Extract features from this frame
+        cv::Mat frame_roi = frame(ROI);
+        
+        // show&save the frame_roi
+        // cv::imshow("frame_roi", frame_roi);
+        // std::string frame_roi_path = saved_path + "frame_roi_r" + std::to_string(selected_row) + "_c" + std::to_string(selected_col) + ".png";
+        // cv::imwrite(frame_roi_path, frame_roi);
+        
+        // Extract features
+        std::vector<cv::Point2f> good_corners;
+        cv::goodFeaturesToTrack(frame_roi,
+                                good_corners,
+                                points_per_cell,
+                                0.01,
+                                7,
+                                cv::Mat(),
+                                7,
+                                false,
+                                0.04);
+        
+        // Add the strongest "points per cell" features from this extraction
+        for(int k = 0;k < good_corners.size();k++)
+        {
+            if(k == points_per_cell)
+                break;
+            
+            // Add the offset to the point location
+            cv::Point2f point_location = good_corners.at(k);
+
+            // visualize the extracted features on frame_roi
+            // cv::circle(frame_roi, point_location, 3, cv::Scalar(0, 255, 0), -1);
+            
+            point_location.x += selected_col*cell_width;
+            point_location.y += selected_row*cell_height;
+            
+            // viusalize the extracted features on frame
+            cv::circle(color_frame, point_location, 3, cv::Scalar(0, 0, 255), -1);
+
+            new_features.push_back(point_location);
+        }
+        // // show&save the frame_roi_features
+        // cv::imshow("frame_roi_features", frame_roi);
+        // cv::waitKey(0);
+        // std::string frame_roi_feature_path = saved_path + "frame_roi_r" + std::to_string(selected_row) + "_c" + std::to_string(selected_col) + "_features.png";
+        // cv::imwrite(frame_roi_feature_path, frame_roi);
+    }
+
+    cv::imshow("frame_features", color_frame);
+    cv::waitKey(0);
+    std::string frame_feature_path = saved_path + "frame_features.png";
+    cv::imwrite(frame_feature_path, color_frame);
+
+    return new_features;
+}
 
 /**
  * Note: For this function, it is assumed that x,y lies within the image!
@@ -336,6 +488,8 @@ double Tracker::bilinearInterpolateImage(cv::Mat image,double x,double y)
 std::vector<double> Tracker::bilinearInterpolateImagePatch(cv::Mat image,double x,double y)
 {
     std::vector<double> result;
+
+    result.reserve((2 * m_patch_size + 1) * (2 * m_patch_size + 1));
     
     for(int x_offset = -m_patch_size;x_offset <= m_patch_size;x_offset++)
     {
@@ -350,6 +504,12 @@ std::vector<double> Tracker::bilinearInterpolateImagePatch(cv::Mat image,double 
 }
 
 // Todo: change return to parameter passed by ref
+/**
+ * @brief check whether features locate within the image
+ * 
+ * @param points 
+ * @return std::vector<int> 
+ */
 std::vector<int> Tracker::checkLocationValidity(std::vector<cv::Point2f> points)
 {
     // Check for each passed point location if the patch centered around it falls completely within the input images
@@ -384,6 +544,7 @@ void Tracker::initialFeatureExtraction(cv::Mat input_image,cv::Mat gradient_imag
     // extract more features
     std::vector<cv::Point2f> old_f;
     std::vector<cv::Point2f> feature_locations = extractFeatures(input_image,old_f);
+    // validity_vector: 1 for valid, 0 for invalid
     std::vector<int> validity_vector = checkLocationValidity(feature_locations);
     
     // Initialize new tracking Frame
@@ -414,6 +575,60 @@ void Tracker::initialFeatureExtraction(cv::Mat input_image,cv::Mat gradient_imag
     }
     
     m_database->m_tracked_frames.push_back(frame);
+}
+
+void Tracker::initialFeatureExtractionAndVisualize(cv::Mat input_image, cv::Mat gradient_image, double gt_exp_time, std::string saved_path)
+{
+    // extract more features
+    std::vector<cv::Point2f> old_f;
+    std::cout << "Number of old features: " << old_f.size() << std::endl;
+    std::vector<cv::Point2f> feature_locations = extractFeaturesAndVisualize(input_image, old_f, saved_path);
+    std::cout << "Number of new features: " << feature_locations.size() << std::endl;
+    // validity_vector: 1 for valid, 0 for invalid
+    std::vector<int> validity_vector = checkLocationValidity(feature_locations);
+    int num_valid = 0, num_invalid = 0;
+    for (auto& val : validity_vector) {
+        if (val == 0) 
+            num_invalid += 1;
+        else if (val == 1)
+            num_valid += 1;
+    }
+    std::cout << "Number of valid features: " << num_valid << std::endl;
+    std::cout << "Number of invalid features: " << num_invalid << std::endl;
+    
+    // Initialize new tracking Frame
+    std::cout << "Start intializing new frame" << std::endl;
+    Frame frame;
+    frame.m_image = input_image;
+    frame.m_image_corrected = input_image.clone();
+    frame.m_exp_time = 1.0;
+    frame.m_gt_exp_time = gt_exp_time;
+    
+    // Push back tracked feature points to the tracking Frame
+    std::cout << "Start processing features" << std::endl;
+    for(int p = 0;p < feature_locations.size();p++)
+    {
+        // Skip invalid points (too close to the side of image)
+        if(validity_vector.at(p) == 0)
+            continue;
+        
+        // Create new feature object and associate with it output intensities, gradient values, etc.
+        Feature* f = new Feature();
+        f->m_xy_location = feature_locations.at(p);
+        f->m_next_feature = NULL;
+        f->m_prev_feature = NULL;
+        std::vector<double> os = bilinearInterpolateImagePatch(input_image,feature_locations.at(p).x,feature_locations.at(p).y);
+        std::vector<double> gs = bilinearInterpolateImagePatch(gradient_image,feature_locations.at(p).x,feature_locations.at(p).y);
+        f->m_gradient_values = gs;
+        f->m_output_values = os;
+        f->m_radiance_estimates = os;
+        frame.m_features.push_back(f);
+    }
+    std::cout << "Finish processing features" << std::endl;
+    
+    m_database->m_tracked_frames.push_back(frame);
+
+    std::cout << "Finish intializing new frame" << std::endl;
 }
 
 void Tracker::computeGradientImage(cv::Mat input_image,cv::Mat &gradient_image)

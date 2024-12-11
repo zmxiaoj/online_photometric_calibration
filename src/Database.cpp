@@ -169,6 +169,8 @@ std::vector<cv::Point2f> Database::fetchActiveFeatureLocations()
     
     Frame last_frame = m_tracked_frames.at(m_tracked_frames.size()-1);
     
+    point_locations.reserve(last_frame.m_features.size());
+    
     for(int i = 0;i < last_frame.m_features.size();i++)
     {
         point_locations.push_back(last_frame.m_features.at(i)->m_xy_location);

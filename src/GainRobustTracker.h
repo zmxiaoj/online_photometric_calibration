@@ -31,14 +31,14 @@ public:
      */
     GainRobustTracker(int patch_size,int pyramid_levels);
     
-    /*
+    /** 
      * Track a new image using exposure estimation + image pyramids
      *
-     * @param frame_1 Frame to track points from
-     * @param frame_2 Frame to track points to
-     * @param pts_1 Given point locations in frame_1
-     * @param pts_2 Output point locations in frame_2 (tracked from frame_1 to frame_2)
-     * @param point_status Vector indicating point validity (set to 0 by tracker if e.g. tracked patches leave input images)
+     * @param [in ] frame_1 Frame to track points from
+     * @param [in ] frame_2 Frame to track points to
+     * @param [in ] pts_1 Given point locations in frame_1
+     * @param [out] pts_2 Output point locations in frame_2 (tracked from frame_1 to frame_2)
+     * @param [in ] point_status Vector indicating point validity (set to 0 by tracker if e.g. tracked patches leave input images)
      * @returns Exposure ratio estimate between frame_1 and frame_2 based on KLT optimization
      */
     double trackImagePyramids(cv::Mat frame_1,
@@ -46,7 +46,43 @@ public:
                               std::vector<cv::Point2f> pts_1,
                               std::vector<cv::Point2f>& pts_2,
                               std::vector<int>& point_status);
-    
+
+    /**
+     * @brief Track a new image using exposure estimation + image pyramids & visualize
+     * 
+     * @param frame_1 
+     * @param frame_2 
+     * @param pts_1 
+     * @param pts_2 
+     * @param point_status 
+     * @param saved_path
+     * @return double 
+     */
+    double trackImagePyramidsAndVisualize(cv::Mat frame_1,
+                                          cv::Mat frame_2,
+                                          std::vector<cv::Point2f> pts_1,
+                                          std::vector<cv::Point2f>& pts_2,
+                                          std::vector<int>& point_status,
+                                          std::string saved_path);
+
+    /**
+     * @brief Track points on a specific pyramid layer & visualize
+     *
+     * @param [in ] old_image First input image
+     * @param [in ] new_image Second input image, track new features to this image
+     * @param [in ] input_points Original points in first input image
+     * @param [out] output_points Tracked point locations in second input image
+     * @param [out] point_validity Vector indicating point validity (set to 0 by tracker if e.g. tracked patches leave input images)
+     * @param [in ] saved_path Path to save visualization results
+     * @returns Exposure ratio estimate between first and second input image
+     */
+    double trackImageExposurePyrAndVisualize(cv::Mat old_image,
+                                             cv::Mat new_image,
+                                             std::vector<cv::Point2f> input_points,
+                                             std::vector<cv::Point2f>& output_points,
+                                             std::vector<int>& point_validity,
+                                             std::string saved_path);
+
 private:
     
     /*

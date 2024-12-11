@@ -86,7 +86,16 @@ public:
      * @param [in] old_features 
      * @return std::vector<cv::Point2f> 
      */
-    std::vector<cv::Point2f> extractFeaturesAndVisualize(cv::Mat frame,std::vector<cv::Point2f> old_features);
+    std::vector<cv::Point2f> extractFeaturesAndVisualize(cv::Mat frame, std::vector<cv::Point2f>& old_features, std::string saved_path);
+
+    /**
+     * @brief Extract features for the first frame & visualize
+     * 
+     * @param input_image 
+     * @param gradient_image 
+     * @param gt_exp_time 
+     */
+    void initialFeatureExtractionAndVisualize(cv::Mat input_image, cv::Mat gradient_image, double gt_exp_time, std::string saved_path);
 
 private:
     
