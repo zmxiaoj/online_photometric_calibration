@@ -176,6 +176,7 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
         
         // Perform tracking on current level
         std::cout << "Start tracking " << level << " pyramid level" << std::endl;
+        // TODO: change this func to "trackImageExposurePyrAndVisualize"
         double exp_estimate = trackImageExposurePyr(old_pyramid.at(level),
                                                     new_pyramid.at(level),
                                                     scaled_tracked_points,
@@ -393,6 +394,7 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
                                                             std::vector<int>& point_validity,
                                                             std::string saved_path)
 {
+    // TODO: finish this part
     // Number of points to track
     int nr_points = static_cast<int>(input_points.size());
     std::cout << "Number of points to track: " << nr_points << std::endl;

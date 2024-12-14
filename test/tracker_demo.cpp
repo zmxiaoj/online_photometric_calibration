@@ -68,6 +68,6 @@ int main(int argc, char** argv)
     gain_robust_klt_tracker.trackImagePyramidsAndVisualize( last_image, new_frame, last_frame_features, 
                                                             tracked_points_new_frame, tracked_point_status_int,
                                                             saved_path);
-
+    
     return 0;
 }
