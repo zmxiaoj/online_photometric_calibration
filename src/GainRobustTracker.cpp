@@ -424,10 +424,13 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
         std::cout << "Number of valid points: " << nr_valid_points << std::endl;
         
         // Allocate space for W,V matrices
+        // W_2nx1
         cv::Mat W(2*nr_valid_points,1,CV_64F,0.0);
+        // V_2nx1
         cv::Mat V(2*nr_valid_points,1,CV_64F,0.0);
         
         // Allocate space for U_INV and the original Us
+        // U_INV_2nx2n
         cv::Mat U_INV(2*nr_valid_points,2*nr_valid_points,CV_64F,0.0);
         std::vector<cv::Mat> Us;
         
@@ -446,15 +449,32 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
             absolute_point_index++;
             
             // Build U matrix
+            // U_2x2
             cv::Mat U(2,2, CV_64F, 0.0);
             
             // Bilinear image interpolation
             cv::Mat patch_intensities_1;
             cv::Mat patch_intensities_2;
+            // m_patch_size = 2
             int absolute_patch_size = ((m_patch_size+1)*2+1);  // Todo: why m_patch_size+1?
+            // get 7x7 patch from new_image&old_image
             cv::getRectSubPix(new_image, cv::Size(absolute_patch_size,absolute_patch_size), output_points.at(p), patch_intensities_2,CV_32F);
             cv::getRectSubPix(old_image, cv::Size(absolute_patch_size,absolute_patch_size), input_points.at(p), patch_intensities_1,CV_32F);
             
+            std::cout << "Size of patch_intensities_1: " << patch_intensities_1.size() << std::endl;
+            std::cout << "Size of patch_intensities_2: " << patch_intensities_2.size() << std::endl;
+            // svae patch_intensities_1&patch_intensities_2
+            std::string patch_intensities_1_saved_path = saved_path + "patch_intensities_1_p" + std::to_string(p) + ".png";
+            // cv::imshow("patch_intensities_1", patch_intensities_1);
+            // cv::waitKey(0);
+            cv::imwrite(patch_intensities_1_saved_path, patch_intensities_1);
+            std::cout << "Save patch_intensities_1 to " << patch_intensities_1_saved_path << std::endl;
+            std::string patch_intensities_2_saved_path = saved_path + "patch_intensities_2_p" + std::to_string(p) + ".png";
+            // cv::imshow("patch_intensities_2", patch_intensities_2);
+            // cv::waitKey(0);
+            cv::imwrite(patch_intensities_2_saved_path, patch_intensities_2);
+            std::cout << "Save patch_intensities_2 to " << patch_intensities_2_saved_path << std::endl;
+
             // Go through image patch around this point
             for(int r = 0; r < 2*m_patch_size+1;r++)
             {
@@ -560,6 +580,12 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
     return exp(K_total);
 }
 
+/**
+ * @brief 
+ * 
+ * @param validity_vector 
+ * @return int 
+ */
 int GainRobustTracker::getNrValidPoints(std::vector<int> validity_vector)
 {
     // Simply sum up the validity vector

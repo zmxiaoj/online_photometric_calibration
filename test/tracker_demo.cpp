@@ -56,7 +56,8 @@ int main(int argc, char** argv)
     tracker.initialFeatureExtractionAndVisualize(first_image, first_gradient_image, first_gt_exp_time, saved_path);
     std::cout << "Finish extracting features for first frame and visualize" << std::endl;
 
-    GainRobustTracker gain_robust_klt_tracker(2, 3);
+    int patch_size = 2, pyramid_levels = 3;
+    GainRobustTracker gain_robust_klt_tracker(patch_size, pyramid_levels);
     cv::Mat last_image = database.fetchActiveImage();
     std::vector<cv::Point2f> last_frame_features = database.fetchActiveFeatureLocations();
     
