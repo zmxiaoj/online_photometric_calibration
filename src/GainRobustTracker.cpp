@@ -17,6 +17,11 @@ GainRobustTracker::GainRobustTracker(int patch_size,int pyramid_levels)
     m_pyramid_levels = pyramid_levels;
 }
 
+/**
+ * @brief 
+ * 
+ * @return average exposure ratio estimate 
+ */
 // Todo: change frame_1 frame 2 to ref (or const ref), pts_1 to ref
 double GainRobustTracker::trackImagePyramids(cv::Mat frame_1,
                                              cv::Mat frame_2,
@@ -387,6 +392,18 @@ double GainRobustTracker::trackImageExposurePyr(cv::Mat old_image,
     return exp(K_total);
 }
 
+/**
+ * @brief Gain Robust KLT Tracking with exposure estimation and image pyramids
+ *        reference: Joint Radiometric Calibration and Feature Tracking for an Adaptive Stereo System-Kim et al.
+ * 
+ * @param [in ] old_image 
+ * @param [in ] new_image 
+ * @param [in ] input_points 
+ * @param [out] output_points 
+ * @param [out] point_validity 
+ * @param [in ] saved_path 
+ * @return double 
+ */
 double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
                                                             cv::Mat new_image,
                                                             std::vector<cv::Point2f> input_points,
@@ -475,22 +492,29 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
             cv::imwrite(patch_intensities_2_saved_path, patch_intensities_2);
             std::cout << "Save patch_intensities_2 to " << patch_intensities_2_saved_path << std::endl;
 
+            int point_patch_size = 2*m_patch_size+1;
+            std::cout << "Go through patch around this point, size is " << point_patch_size << "*" << point_patch_size << std::endl;
             // Go through image patch around this point
             for(int r = 0; r < 2*m_patch_size+1;r++)
             {
                 for(int c = 0; c < 2*m_patch_size+1;c++)
                 {
                     // Fetch patch intensity values
+                    //* According to paper, online calibration mode, 
+                    //* the pixel intensity O' is transfered by f()&V()
+                    //* O' = f^{-1}(O)/V(p(u,v))
+
                     double i_frame_1 = patch_intensities_1.at<float>(1+r,1+c);
                     double i_frame_2 = patch_intensities_2.at<float>(1+r,1+c);
                     
+                    // clamp
                     if(i_frame_1 < 1)
                         i_frame_1 = 1;
                     if(i_frame_2 < 1)
                         i_frame_2 = 1;
                     
                     // Estimate patch gradient values
-                    // central difference
+                    // central difference, calculate gradient in x&y direction of patch_intensities_1&patch_intensities_2
                     double grad_1_x = (patch_intensities_1.at<float>(1+r,1+c+1) - patch_intensities_1.at<float>(1+r,1+c-1))/2;
                     double grad_1_y = (patch_intensities_1.at<float>(1+r+1,1+c) - patch_intensities_1.at<float>(1+r-1,1+c))/2;
                     
