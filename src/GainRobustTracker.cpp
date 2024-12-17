@@ -182,6 +182,7 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
         // Perform tracking on current level
         std::cout << "Start tracking " << level << " pyramid level" << std::endl;
         // TODO: change this func to "trackImageExposurePyrAndVisualize"
+        // TODO: Check whether Gain Robust KLT Tracking while not using exposure estimation result?
         double exp_estimate = trackImageExposurePyr(old_pyramid.at(level),
                                                     new_pyramid.at(level),
                                                     scaled_tracked_points,
