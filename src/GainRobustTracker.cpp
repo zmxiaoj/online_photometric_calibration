@@ -152,13 +152,15 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
     std::cout << "Finish constructing image pyramids" << std::endl;
 
     // Temporary vector to update tracking estiamtes over time
+    // Intialize tracking point estimates with input points
     std::cout << "Start tracking & estimating exposure time" << std::endl;
     std::vector<cv::Point2f> tracking_estimates = pts_1;
     
     double all_exp_estimates = 0.0;
     int nr_estimates = 0;
     
-    // Iterate all pyramid levels and perform gain robust KLT on each level (coarse to fine)
+    // Iterate all pyramid levels and perform gain robust KLT on each level
+    // from top to bottom (coarse to fine)
     std::cout << "Start iterating all pyramid levels" << std::endl;
     for(int level = (int)new_pyramid.size()-1;level >= 0;level--)
     {
@@ -181,14 +183,15 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
         
         // Perform tracking on current level
         std::cout << "Start tracking " << level << " pyramid level" << std::endl;
-        // TODO: change this func to "trackImageExposurePyrAndVisualize"
-        // TODO: Check whether Gain Robust KLT Tracking while not using exposure estimation result?
-        double exp_estimate = trackImageExposurePyr(old_pyramid.at(level),
-                                                    new_pyramid.at(level),
-                                                    scaled_tracked_points,
-                                                    scaled_tracking_estimates,
-                                                    point_validity);
-        
+        // Gain Robust KLT to find tracking points in frame 2
+        double exp_estimate = trackImageExposurePyrAndVisualize(old_pyramid.at(level),
+                                                                new_pyramid.at(level),
+                                                                scaled_tracked_points,
+                                                                scaled_tracking_estimates,
+                                                                point_validity,
+                                                                saved_path);
+        // TODO: Visualize the tracking results, and compare results with the vanilla KLT
+
         // Optional: Do something with the estimated exposure ratio
         // std::cout << "Estimated exposure ratio of current level: " << exp_estimate << std::endl;
         
@@ -196,7 +199,7 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
         all_exp_estimates += exp_estimate;
         nr_estimates++;
         
-        // Update the current tracking result by scaling down to pyramid level 0
+        // Update the current tracking result by scaling down to pyramid level 0 from current level
         for(int i = 0;i < scaled_tracking_estimates.size();i++)
         {
             if(point_validity.at(i) == 0)
@@ -395,7 +398,9 @@ double GainRobustTracker::trackImageExposurePyr(cv::Mat old_image,
 
 /**
  * @brief Gain Robust KLT Tracking with exposure estimation and image pyramids
- *        reference: Joint Radiometric Calibration and Feature Tracking for an Adaptive Stereo System-Kim et al.
+ *        This func can get the position of tracking points in the second image 
+ *        And output the exposure time difference K between the two images
+ *        Reference paper: Joint Radiometric Calibration and Feature Tracking for an Adaptive Stereo System, Kim et al.
  * 
  * @param [in ] old_image 
  * @param [in ] new_image 
@@ -412,7 +417,6 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
                                                             std::vector<int>& point_validity,
                                                             std::string saved_path)
 {
-    // TODO: finish this part
     // Number of points to track
     int nr_points = static_cast<int>(input_points.size());
     std::cout << "Number of points to track: " << nr_points << std::endl;
@@ -435,6 +439,7 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
     // Final exposure time estimate
     double K_total = 0.0;
     
+    // TODO: Try to replace Opencv matrix calculation with Eigen, and compare the precision
     for(int round = 0;round < 1;round++)
     {
         // Get the currently valid points
@@ -496,15 +501,20 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
             int point_patch_size = 2*m_patch_size+1;
             std::cout << "Go through patch around this point, size is " << point_patch_size << "*" << point_patch_size << std::endl;
             // Go through image patch around this point
+            //* I = f(e*V(r)*L)
+            //* g(I) = ln(f_inv(I)) 
+            //* g(I) = lne + lnV(r) + lnL
+            //* g(J) - g(I) = K, K = ln(e_2/e_1) 
+            
+            //* [ U       W  ] * [ dx ] = [ v ]
+            //* [ W^T  lambda]   [  K ]   [ m ]
             for(int r = 0; r < 2*m_patch_size+1;r++)
             {
                 for(int c = 0; c < 2*m_patch_size+1;c++)
                 {
                     // Fetch patch intensity values
-                    //* According to paper, online calibration mode, 
-                    //* the pixel intensity O' is transfered by f()&V()
-                    //* O' = f^{-1}(O)/V(p(u,v))
-
+                    // Patch intensity removed response function "f()"& vignette function
+                    // f_inv(I)/V(r) 
                     double i_frame_1 = patch_intensities_1.at<float>(1+r,1+c);
                     double i_frame_2 = patch_intensities_2.at<float>(1+r,1+c);
                     
@@ -524,8 +534,10 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
                     
                     double a = (1.0/i_frame_2)*grad_2_x + (1.0/i_frame_1)*grad_1_x;
                     double b = (1.0/i_frame_2)*grad_2_y + (1.0/i_frame_1)*grad_1_y;
+                    // Normalizing the intensity value to [0,1] has the same result 
                     double beta = log(i_frame_2/255.0) - log(i_frame_1/255.0);
                     
+                    // U_2x2
                     U.at<double>(0,0) += 0.5*a*a;
                     U.at<double>(1,0) += 0.5*a*b;
                     U.at<double>(0,1) += 0.5*a*b;
@@ -551,6 +563,7 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
             //std::cout << U_INV_p << std::endl;
             //std::cout << U << std::endl;
             
+            // Save U_inv for schur complement
             U_INV.at<double>(2*absolute_point_index,2*absolute_point_index) = U_INV_p.at<double>(0,0);
             U_INV.at<double>(2*absolute_point_index+1,2*absolute_point_index) = U_INV_p.at<double>(1,0);
             U_INV.at<double>(2*absolute_point_index,2*absolute_point_index+1) = U_INV_p.at<double>(0,1);
