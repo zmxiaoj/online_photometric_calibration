@@ -443,10 +443,11 @@ std::vector<cv::Point2f> Tracker::extractFeaturesAndVisualize(cv::Mat frame, std
         // cv::imwrite(frame_roi_feature_path, frame_roi);
     }
 
-    cv::imshow("frame_features", color_frame);
-    cv::waitKey(0);
-    std::string frame_feature_path = saved_path + "frame_features.png";
+    // cv::imshow("frame_extract_features", color_frame);
+    // cv::waitKey(0);
+    std::string frame_feature_path = saved_path + "frame_extract_features.png";
     cv::imwrite(frame_feature_path, color_frame);
+    std::cout << "Save frame_extract_features to " << frame_feature_path << std::endl;
 
     return new_features;
 }
@@ -656,10 +657,11 @@ void Tracker::computeGradientImageAndVisualize(cv::Mat input_image,cv::Mat &grad
     // Todo: change to class member
     cv::Mat blurred_image;
     cv::GaussianBlur(input_image, blurred_image, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT);
-    cv::imshow("blurred image", blurred_image);
-    cv::waitKey(0);
+    // cv::imshow("blurred image", blurred_image);
+    // cv::waitKey(0);
     std::string blurred_image_path = saved_path + "blurred_image.png";
     cv::imwrite(blurred_image_path, blurred_image);
+    std::cout << "Save blurred image to " << blurred_image_path << std::endl;
     
     // Todo: change to class member
     cv::Mat grad_x,grad_y;
@@ -667,22 +669,25 @@ void Tracker::computeGradientImageAndVisualize(cv::Mat input_image,cv::Mat &grad
     cv::Sobel(blurred_image, grad_y, CV_16S, 0, 1, 3, 1.0, 0, cv::BORDER_DEFAULT);
     // convert gradients to absolute values
     cv::convertScaleAbs(grad_x, grad_x);
-    cv::imshow("grad_x", grad_x);
-    cv::waitKey(0);
+    // cv::imshow("grad_x", grad_x);
+    // cv::waitKey(0);
     std::string grad_x_path = saved_path + "grad_x.png";
     cv::imwrite(grad_x_path, grad_x);
+    std::cout << "Save grad_x image to " << grad_x_path << std::endl;
 
     cv::convertScaleAbs(grad_y, grad_y);
-    cv::imshow("grad_y", grad_y);
-    cv::waitKey(0);
+    // cv::imshow("grad_y", grad_y);
+    // cv::waitKey(0);
     std::string grad_y_path = saved_path + "grad_y.png";
     cv::imwrite(grad_y_path, grad_y);
+    std::cout << "Save grad_y image to " << grad_y_path << std::endl;
     
     cv::addWeighted( grad_x, 0.5, grad_y, 0.5, 0, gradient_image );
-    cv::imshow("gradient image", gradient_image);
-    cv::waitKey(0);
+    // cv::imshow("gradient image", gradient_image);
+    // cv::waitKey(0);
     std::string gradient_image_path = saved_path + "gradient_image.png";
     cv::imwrite(gradient_image_path, gradient_image);
+    std::cout << "Save gradient image to " << gradient_image_path << std::endl;
 }
 
 /**

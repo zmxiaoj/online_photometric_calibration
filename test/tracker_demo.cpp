@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     std::vector<cv::Point2f> tracked_points_new_frame;
     std::vector<int> tracked_point_status_int;
 
-    cv::Mat new_frame = cv::imread("../data/00010.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat new_frame = cv::imread("../data/00012.jpg", cv::IMREAD_GRAYSCALE);
 
     gain_robust_klt_tracker.trackImagePyramidsAndVisualize( last_image, new_frame, last_frame_features, 
                                                             tracked_points_new_frame, tracked_point_status_int,
