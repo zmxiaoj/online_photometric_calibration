@@ -134,9 +134,10 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
     cv::buildPyramid(frame_2, new_pyramid, m_pyramid_levels);
     for (int i = 0; i < new_pyramid.size(); i++) {
         std::string new_pyramid_saved_path = saved_path + "new_pyramid_" + std::to_string(i) + ".png";
-        cv::imshow("new pyramid", new_pyramid.at(i));
-        cv::waitKey(0);
+        // cv::imshow("new pyramid", new_pyramid.at(i));
+        // cv::waitKey(0);
         cv::imwrite(new_pyramid_saved_path, new_pyramid.at(i));
+        std::cout << "Save new pyramid image to " << new_pyramid_saved_path << std::endl;
     }
 
 
@@ -144,9 +145,10 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
     cv::buildPyramid(frame_1, old_pyramid, m_pyramid_levels);
     for (int i = 0; i < old_pyramid.size(); i++) {
         std::string old_pyramid_saved_path = saved_path + "old_pyramid_" + std::to_string(i) + ".png";
-        cv::imshow("old_pyramid", old_pyramid.at(i));
-        cv::waitKey(0);
+        // cv::imshow("old_pyramid", old_pyramid.at(i));
+        // cv::waitKey(0);
         cv::imwrite(old_pyramid_saved_path, old_pyramid.at(i));
+        std::cout << "Save old pyramid image to " << old_pyramid_saved_path << std::endl;
     }
     
     std::cout << "Finish constructing image pyramids" << std::endl;
@@ -190,7 +192,6 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
                                                                 scaled_tracking_estimates,
                                                                 point_validity,
                                                                 saved_path);
-        // TODO: Visualize the tracking results, and compare results with the vanilla KLT
 
         // Optional: Do something with the estimated exposure ratio
         // std::cout << "Estimated exposure ratio of current level: " << exp_estimate << std::endl;
@@ -213,10 +214,29 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
         }
     }
     
+    std::cout << "Finish iterating all pyramid levels" << std::endl;
+
     // Write result to output vectors passed by reference
     pts_2 = tracking_estimates;
     point_status = point_validity;
-    
+
+    // TODO: Visualize the tracking results, and compare results with the vanilla KLT
+    cv::Mat frame_2_tracking_results;
+    cv::cvtColor(frame_2, frame_2_tracking_results, cv::COLOR_GRAY2BGR);
+    for (int i = 0; i < point_validity.size(); i++) {
+        if (point_validity.at(i) == 0)
+            continue;
+        cv::circle(frame_2_tracking_results, pts_1.at(i), 2, cv::Scalar(128, 0, 128), -1);
+        cv::circle(frame_2_tracking_results, pts_2.at(i), 2, cv::Scalar(255, 165, 0), -1);
+        cv::line(frame_2_tracking_results, pts_1.at(i), pts_2.at(i), cv::Scalar(0, 255, 255), 1);
+    }
+    std::string frame_2_tracking_results_saved_path = saved_path + "frame_2_tracking_results.png";
+    std::cout << "Save frame_2_tracking_results to " << frame_2_tracking_results_saved_path << std::endl;
+    // cv::imshow("frame_2_tracking_results", frame_2_tracking_results);
+    // cv::waitKey(0);
+    cv::imwrite(frame_2_tracking_results_saved_path, frame_2_tracking_results);
+
+
     // Average exposure ratio estimate
     double overall_exp_estimate = all_exp_estimates / nr_estimates;
     return overall_exp_estimate;
@@ -419,7 +439,7 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
 {
     // Number of points to track
     int nr_points = static_cast<int>(input_points.size());
-    std::cout << "Number of points to track: " << nr_points << std::endl;
+    // std::cout << "Number of points to track: " << nr_points << std::endl;
     
     // Updated point locations which are updated throughout the iterations
     if(output_points.size() == 0)
@@ -444,7 +464,7 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
     {
         // Get the currently valid points
         int nr_valid_points = getNrValidPoints(point_validity);
-        std::cout << "Number of valid points: " << nr_valid_points << std::endl;
+        // std::cout << "Number of valid points: " << nr_valid_points << std::endl;
         
         // Allocate space for W,V matrices
         // W_2nx1
@@ -484,22 +504,23 @@ double GainRobustTracker::trackImageExposurePyrAndVisualize(cv::Mat old_image,
             cv::getRectSubPix(new_image, cv::Size(absolute_patch_size,absolute_patch_size), output_points.at(p), patch_intensities_2,CV_32F);
             cv::getRectSubPix(old_image, cv::Size(absolute_patch_size,absolute_patch_size), input_points.at(p), patch_intensities_1,CV_32F);
             
-            std::cout << "Size of patch_intensities_1: " << patch_intensities_1.size() << std::endl;
-            std::cout << "Size of patch_intensities_2: " << patch_intensities_2.size() << std::endl;
-            // svae patch_intensities_1&patch_intensities_2
-            std::string patch_intensities_1_saved_path = saved_path + "patch_intensities_1_p" + std::to_string(p) + ".png";
-            // cv::imshow("patch_intensities_1", patch_intensities_1);
+            // std::cout << "Size of patch_intensities_1: " << patch_intensities_1.size() << std::endl;
+            // std::cout << "Size of patch_intensities_2: " << patch_intensities_2.size() << std::endl;
+            // // svae patch_intensities_1&patch_intensities_2
+            // std::string patch_intensities_1_saved_path = saved_path + "patch_intensities_1_p" + std::to_string(p) + ".png";
+            // // cv::imshow("patch_intensities_1", patch_intensities_1);
             // cv::waitKey(0);
-            cv::imwrite(patch_intensities_1_saved_path, patch_intensities_1);
-            std::cout << "Save patch_intensities_1 to " << patch_intensities_1_saved_path << std::endl;
-            std::string patch_intensities_2_saved_path = saved_path + "patch_intensities_2_p" + std::to_string(p) + ".png";
-            // cv::imshow("patch_intensities_2", patch_intensities_2);
+            // cv::imwrite(patch_intensities_1_saved_path, patch_intensities_1);
+            // std::cout << "Save patch_intensities_1 to " << patch_intensities_1_saved_path << std::endl;
+            // std::string patch_intensities_2_saved_path = saved_path + "patch_intensities_2_p" + std::to_string(p) + ".png";
+            // // cv::imshow("patch_intensities_2", patch_intensities_2);
             // cv::waitKey(0);
-            cv::imwrite(patch_intensities_2_saved_path, patch_intensities_2);
-            std::cout << "Save patch_intensities_2 to " << patch_intensities_2_saved_path << std::endl;
+            // cv::imwrite(patch_intensities_2_saved_path, patch_intensities_2);
+            // std::cout << "Save patch_intensities_2 to " << patch_intensities_2_saved_path << std::endl;
 
             int point_patch_size = 2*m_patch_size+1;
-            std::cout << "Go through patch around this point, size is " << point_patch_size << "*" << point_patch_size << std::endl;
+            // std::cout << "Go through patch around this point, size is " << point_patch_size << "*" << point_patch_size << std::endl;
+            
             // Go through image patch around this point
             //* I = f(e*V(r)*L)
             //* g(I) = ln(f_inv(I)) 
