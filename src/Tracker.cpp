@@ -81,9 +81,9 @@ void Tracker::trackNewFrame(cv::Mat input_image,double gt_exp_time)
                                                  tracked_points_new_frame,
                                                  tracked_points_backtracking,
                                                  tracked_point_status_int2);
-    for(int i = 0;i < tracked_point_status_int.size();i++)
+    for(int i = 0;i < tracked_point_status_int2.size();i++)
     {
-        if(tracked_point_status_int.at(i) == 0)
+        if(tracked_point_status_int2.at(i) == 0)
         {
             tracked_point_status_backtracking.push_back(0);
         }
