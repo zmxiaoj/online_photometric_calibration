@@ -30,9 +30,16 @@ public:
     /**
      * Estimate a fast exposure time for the latest frame in the database
      * The tracks of the last m_window_size frames are considered for exposure time optimization
-     * Response and vignette and considered fixed, based on the current estimate in the database
+     * Response and vignette are considered fixed, based on the current estimate in the database
      */
     double estimateExposureTime();
+
+    /**
+     * @brief estimate exposure time & visualize process results
+     * @param [in ] saved_path
+     * @return double 
+     */
+    double estimateExposureTimeAndVisualize(std::string saved_path);
     
 private:
     

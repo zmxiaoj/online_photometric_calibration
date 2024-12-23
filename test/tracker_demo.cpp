@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 
     double first_gt_exp_time = gt_exp_times[0];
     
-    // Tracker::trackNewFrame
+    // Start Tracker::trackNewFrame Function
     cv::Mat first_gradient_image;
     std::cout << "Start computing gradient image and visualize it" << std::endl;
     tracker.computeGradientImageAndVisualize(first_image, first_gradient_image, saved_path);
@@ -85,7 +85,9 @@ int main(int argc, char** argv)
                                                                     backward_saved_path);
     std::cout << "Finish tracking old frame backward" << std::endl;
 
-    // 
+    // Finish Tracker::trackNewFrame Function
+    // Ignore some part of Tracker::trackNewFrame, e.g., extract_new_features
+
 
     return 0;
 }
