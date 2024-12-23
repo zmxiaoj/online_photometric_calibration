@@ -94,6 +94,7 @@ void Tracker::trackNewFrame(cv::Mat input_image,double gt_exp_time)
     }
     
     // Tracked points from backtracking and old frame should be the same -> check and filter by distance
+    // Traverse all feature points of the first frame(feature_locations)
     for(int p = 0;p < feature_locations.size();p++)
     {
         if(tracked_point_status.at(p) == 0) // Point already set invalid by forward tracking -> ignore
@@ -106,12 +107,14 @@ void Tracker::trackNewFrame(cv::Mat input_image,double gt_exp_time)
         cv::Point2d d_p = feature_locations.at(p) - tracked_points_backtracking.at(p);
         double distance = sqrt(d_p.x*d_p.x + d_p.y*d_p.y);
         
+        // Filter out points that have too large displacement(default = 2.0 pixel)
         if(distance > C_FWD_BWD_TRACKING_THRESH)
         {
             tracked_point_status.at(p) = 0;
         }
     }
     
+    // Construct new frame object and push it back to the database
     Frame frame;
     frame.m_image = input_image;
     frame.m_image_corrected = corrected_frame;
@@ -141,7 +144,8 @@ void Tracker::trackNewFrame(cv::Mat input_image,double gt_exp_time)
         f->m_gradient_values = gs;
         f->m_xy_location = tracked_points_new_frame.at(i);
         f->m_next_feature = NULL;
-        f->m_prev_feature =  m_database->m_tracked_frames.at(m_database->m_tracked_frames.size()-1).m_features.at(i);
+        // Feature locate in the latest tracked frame
+        f->m_prev_feature = m_database->m_tracked_frames.at(m_database->m_tracked_frames.size()-1).m_features.at(i);
         
         m_database->m_tracked_frames.at(m_database->m_tracked_frames.size()-1).m_features.at(i)->m_next_feature = f;
         
@@ -151,7 +155,7 @@ void Tracker::trackNewFrame(cv::Mat input_image,double gt_exp_time)
     
     m_database->m_tracked_frames.push_back(frame);
     
-    // Extract new features
+    // Extract new features beside the old features
     std::vector<cv::Point2f> new_feature_locations = extractFeatures(input_image,m_database->fetchActiveFeatureLocations());
     std::vector<int> new_validity_vector = checkLocationValidity(new_feature_locations);
     for(int p = 0;p < new_feature_locations.size();p++)
@@ -176,7 +180,7 @@ void Tracker::trackNewFrame(cv::Mat input_image,double gt_exp_time)
     }
 }
 
-// Todo: change both types to reference
+
 /**
  * @brief extract features from frame
  * 
@@ -184,6 +188,7 @@ void Tracker::trackNewFrame(cv::Mat input_image,double gt_exp_time)
  * @param old_features 
  * @return std::vector<cv::Point2f> 
  */
+// Todo: change both types to reference
 std::vector<cv::Point2f> Tracker::extractFeatures(cv::Mat frame,std::vector<cv::Point2f> old_features)
 {
     std::vector<cv::Point2f> new_features;
@@ -301,7 +306,11 @@ std::vector<cv::Point2f> Tracker::extractFeatures(cv::Mat frame,std::vector<cv::
 }
 
 /**
- * @brief Extract new features from the frame & visualize
+ * @brief Extract new features beside old features from the frame & visualize
+ * 
+ * @param frame 
+ * @param old_features 
+ * @return std::vector<cv::Point2f> 
  */
 std::vector<cv::Point2f> Tracker::extractFeaturesAndVisualize(cv::Mat frame, std::vector<cv::Point2f>& old_features, std::string saved_path)
 {
@@ -405,6 +414,7 @@ std::vector<cv::Point2f> Tracker::extractFeaturesAndVisualize(cv::Mat frame, std
         // cv::imwrite(frame_roi_path, frame_roi);
         
         // Extract features
+        // TODO: Try to change to SuperPoint
         std::vector<cv::Point2f> good_corners;
         cv::goodFeaturesToTrack(frame_roi,
                                 good_corners,
@@ -453,6 +463,13 @@ std::vector<cv::Point2f> Tracker::extractFeaturesAndVisualize(cv::Mat frame, std
 }
 
 /**
+ * @brief get the intensity value of sub-pixel(x, y)
+ * @param [in ] image
+ * @param [in ] x
+ * @param [in ] y
+ * @return double  
+ */
+/**
  * Note: For this function, it is assumed that x,y lies within the image!
  */
 double Tracker::bilinearInterpolateImage(cv::Mat image,double x,double y)
@@ -483,6 +500,10 @@ double Tracker::bilinearInterpolateImage(cv::Mat image,double x,double y)
     return w1*i1 + w2*i2 + w3*i3 + w4*i4;
 }
 
+/**
+ * @brief get the intensity values of sub-pixel(x, y) in the image patch
+ * 
+ */
 /**
  * Note: For this function, it is assumed that x,y lies within the image!
  */

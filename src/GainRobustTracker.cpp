@@ -109,8 +109,8 @@ double GainRobustTracker::trackImagePyramids(cv::Mat frame_1,
 }
 
 // track image by pyramids & visualize 
-double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
-                                                         cv::Mat frame_2,
+double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat source_frame,
+                                                         cv::Mat target_frame,
                                                          std::vector<cv::Point2f> pts_1,
                                                          std::vector<cv::Point2f>& pts_2,
                                                          std::vector<int>& point_status,
@@ -130,25 +130,25 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
 
     // Calculate image pyramid of frame 1 and frame 2
     std::cout << "Start constructing image pyramids" << std::endl;
-    std::vector<cv::Mat> new_pyramid;
-    cv::buildPyramid(frame_2, new_pyramid, m_pyramid_levels);
-    for (int i = 0; i < new_pyramid.size(); i++) {
-        std::string new_pyramid_saved_path = saved_path + "new_pyramid_" + std::to_string(i) + ".png";
-        // cv::imshow("new pyramid", new_pyramid.at(i));
+    std::vector<cv::Mat> target_frame_pyramid;
+    cv::buildPyramid(target_frame, target_frame_pyramid, m_pyramid_levels);
+    for (int i = 0; i < target_frame_pyramid.size(); i++) {
+        std::string target_frame_pyramid_saved_path = saved_path + "target_frame_pyramid_" + std::to_string(i) + ".png";
+        // cv::imshow("target_frame_pyramid", target_frame_pyramid.at(i));
         // cv::waitKey(0);
-        cv::imwrite(new_pyramid_saved_path, new_pyramid.at(i));
-        std::cout << "Save new pyramid image to " << new_pyramid_saved_path << std::endl;
+        cv::imwrite(target_frame_pyramid_saved_path, target_frame_pyramid.at(i));
+        std::cout << "Save target frame pyramid images to " << target_frame_pyramid_saved_path << std::endl;
     }
 
 
-    std::vector<cv::Mat> old_pyramid;
-    cv::buildPyramid(frame_1, old_pyramid, m_pyramid_levels);
-    for (int i = 0; i < old_pyramid.size(); i++) {
-        std::string old_pyramid_saved_path = saved_path + "old_pyramid_" + std::to_string(i) + ".png";
-        // cv::imshow("old_pyramid", old_pyramid.at(i));
+    std::vector<cv::Mat> source_frame_pyramid;
+    cv::buildPyramid(source_frame, source_frame_pyramid, m_pyramid_levels);
+    for (int i = 0; i < source_frame_pyramid.size(); i++) {
+        std::string source_frame_pyramid_saved_path = saved_path + "source_frame_pyramid_" + std::to_string(i) + ".png";
+        // cv::imshow("source_frame_pyramid", source_frame_pyramid.at(i));
         // cv::waitKey(0);
-        cv::imwrite(old_pyramid_saved_path, old_pyramid.at(i));
-        std::cout << "Save old pyramid image to " << old_pyramid_saved_path << std::endl;
+        cv::imwrite(source_frame_pyramid_saved_path, source_frame_pyramid.at(i));
+        std::cout << "Save source frame pyramid images to " << source_frame_pyramid_saved_path << std::endl;
     }
     
     std::cout << "Finish constructing image pyramids" << std::endl;
@@ -164,7 +164,7 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
     // Iterate all pyramid levels and perform gain robust KLT on each level
     // from top to bottom (coarse to fine)
     std::cout << "Start iterating all pyramid levels" << std::endl;
-    for(int level = (int)new_pyramid.size()-1;level >= 0;level--)
+    for(int level = (int)target_frame_pyramid.size()-1;level >= 0;level--)
     {
         // Scale the input points and tracking estimates to the current pyramid level
         std::cout << "Start processing " << level << " pyramid level" << std::endl;
@@ -186,8 +186,8 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
         // Perform tracking on current level
         std::cout << "Start tracking " << level << " pyramid level" << std::endl;
         // Gain Robust KLT to find tracking points in frame 2
-        double exp_estimate = trackImageExposurePyrAndVisualize(old_pyramid.at(level),
-                                                                new_pyramid.at(level),
+        double exp_estimate = trackImageExposurePyrAndVisualize(source_frame_pyramid.at(level),
+                                                                target_frame_pyramid.at(level),
                                                                 scaled_tracked_points,
                                                                 scaled_tracking_estimates,
                                                                 point_validity,
@@ -221,21 +221,20 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
     point_status = point_validity;
 
     // TODO: Visualize the tracking results, and compare results with the vanilla KLT
-    cv::Mat frame_2_tracking_results;
-    cv::cvtColor(frame_2, frame_2_tracking_results, cv::COLOR_GRAY2BGR);
+    cv::Mat target_frame_tracking_results;
+    cv::cvtColor(target_frame, target_frame_tracking_results, cv::COLOR_GRAY2BGR);
     for (int i = 0; i < point_validity.size(); i++) {
         if (point_validity.at(i) == 0)
             continue;
-        cv::circle(frame_2_tracking_results, pts_1.at(i), 2, cv::Scalar(128, 0, 128), -1);
-        cv::circle(frame_2_tracking_results, pts_2.at(i), 2, cv::Scalar(255, 165, 0), -1);
-        cv::line(frame_2_tracking_results, pts_1.at(i), pts_2.at(i), cv::Scalar(0, 255, 255), 1);
+        cv::circle(target_frame_tracking_results, pts_1.at(i), 2, cv::Scalar(128, 0, 128), -1);
+        cv::circle(target_frame_tracking_results, pts_2.at(i), 2, cv::Scalar(255, 165, 0), -1);
+        cv::line(target_frame_tracking_results, pts_1.at(i), pts_2.at(i), cv::Scalar(0, 255, 255), 1);
     }
-    std::string frame_2_tracking_results_saved_path = saved_path + "frame_2_tracking_results.png";
-    std::cout << "Save frame_2_tracking_results to " << frame_2_tracking_results_saved_path << std::endl;
-    // cv::imshow("frame_2_tracking_results", frame_2_tracking_results);
+    std::string target_frame_tracking_results_saved_path = saved_path + "target_frame_tracking_results.png";
+    // cv::imshow("target_frame_tracking_results", target_frame_tracking_results);
     // cv::waitKey(0);
-    cv::imwrite(frame_2_tracking_results_saved_path, frame_2_tracking_results);
-
+    cv::imwrite(target_frame_tracking_results_saved_path, target_frame_tracking_results);
+    std::cout << "Save target frame tracking results to " << target_frame_tracking_results_saved_path << std::endl;
 
     // Average exposure ratio estimate
     double overall_exp_estimate = all_exp_estimates / nr_estimates;
@@ -243,9 +242,9 @@ double GainRobustTracker::trackImagePyramidsAndVisualize(cv::Mat frame_1,
 }
 
 /**
- * For a reference on the meaning of the optimization variables and the overall concept of this function
- * refer to the photometric calibration paper 
- * introducing gain robust KLT tracking by Kim et al.
+ * @brief a reference on the meaning of the optimization variables and the overall concept of this function
+ *        refer to the photometric calibration paper 
+ *        introducing gain robust KLT tracking by Kim et al.
  */
  // Todo: change Mat and vector to ref
 double GainRobustTracker::trackImageExposurePyr(cv::Mat old_image,

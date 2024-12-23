@@ -46,6 +46,7 @@ int main(int argc, char** argv)
 
     double first_gt_exp_time = gt_exp_times[0];
     
+    // Tracker::trackNewFrame
     cv::Mat first_gradient_image;
     std::cout << "Start computing gradient image and visualize it" << std::endl;
     tracker.computeGradientImageAndVisualize(first_image, first_gradient_image, saved_path);
@@ -64,11 +65,27 @@ int main(int argc, char** argv)
     std::vector<cv::Point2f> tracked_points_new_frame;
     std::vector<int> tracked_point_status_int;
 
-    cv::Mat new_frame = cv::imread("../data/00012.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat new_frame = cv::imread("../data/00002.jpg", cv::IMREAD_GRAYSCALE);
 
+    std::cout << "Start tracking new frame forward" << std::endl;
+    std::string forward_saved_path = saved_path + "forward/";
     gain_robust_klt_tracker.trackImagePyramidsAndVisualize( last_image, new_frame, last_frame_features, 
                                                             tracked_points_new_frame, tracked_point_status_int,
-                                                            saved_path);
-    
+                                                            forward_saved_path);
+    std::cout << "Finish tracking new frame forward" << std::endl;
+
+    GainRobustTracker gain_robust_klt_tracker_backward(patch_size, pyramid_levels);
+    std::vector<cv::Point2f> tracked_points_backward;
+    std::vector<int> tracked_point_status_int_backward;
+
+    std::cout << "Start tracking old frame backward" << std::endl;
+    std::string backward_saved_path = saved_path + "backward/";
+    gain_robust_klt_tracker_backward.trackImagePyramidsAndVisualize(new_frame, last_image, tracked_points_new_frame, 
+                                                                    tracked_points_backward, tracked_point_status_int_backward,
+                                                                    backward_saved_path);
+    std::cout << "Finish tracking old frame backward" << std::endl;
+
+    // 
+
     return 0;
 }
