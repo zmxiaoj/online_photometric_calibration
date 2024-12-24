@@ -36,6 +36,7 @@ bool NonlinearOptimizer::extractOptimizationBlock()
 
     // Not enough images in the database yet -> extraction fails
     // Todo: why 2 times?
+    //* Number of frames between keyframes * number of keyframes + safe area size
     if(nr_images_in_database < 2*(m_keyframe_spacing*m_min_keyframes_valid)+m_safe_zone_size)
     {
         return false;
@@ -52,6 +53,7 @@ bool NonlinearOptimizer::extractOptimizationBlock()
     m_optimization_block->deleteExposureTimes();
     
     // Iterate through all images in the database (except the most current ones used for exposure optimization)
+    // TODO: Finish this part
     for(int i = 0;i < nr_images_in_database - m_safe_zone_size;i++)
     {
         // Only add keyframe images
@@ -667,7 +669,7 @@ double NonlinearOptimizer::applyResponse(double x)
     return 255*result;
 }
 
-double NonlinearOptimizer::visualizeOptimizationResult(double* inverse_response)
+double NonlinearOptimizer::visualizeOptimizationResult(double* inverse_response, std::string saved_path)
 {
     // Define an exponential factor here to scale response + vignette
     // double exponent = 1.0;
@@ -693,6 +695,8 @@ double NonlinearOptimizer::visualizeOptimizationResult(double* inverse_response)
     response_function[255] = 255;
 
     // For each response value i find s, such that inverse_response[s] = i
+    //* For response function is monotonic, interpolate to get the inverse of inverse_response
+    //* response(i) = s, inverse_response(s) = i
     for(int i=1;i<255;i++)
     {
         for(int s=0;s<255;s++)
@@ -707,7 +711,9 @@ double NonlinearOptimizer::visualizeOptimizationResult(double* inverse_response)
     
     // Setup a 256x256 mat to display inverse response + response
     // Todo: change to class member
-    cv::Mat response_vis_image(256,256,CV_8UC3,cv::Scalar(0,0,0));
+    // cv::Mat response_vis_image(256,256,CV_8UC3,cv::Scalar(0,0,0));
+    cv::Mat response_vis_image(256, 256, CV_8UC3, cv::Scalar(255, 255, 255));
+    cv::Mat inverse_response_vis_image(256, 256, CV_8UC3, cv::Scalar(255, 255, 255));
     for(int i = 0;i < 256;i++)
     {
         int response_value = static_cast<int>(round(response_function[i]));
@@ -723,19 +729,24 @@ double NonlinearOptimizer::visualizeOptimizationResult(double* inverse_response)
             inv_response_value = 255;
         
         //plot the response
-        response_vis_image.at<cv::Vec3b>(255-response_value,i)[0] = 0;
-        response_vis_image.at<cv::Vec3b>(255-response_value,i)[1] = 0;
-        response_vis_image.at<cv::Vec3b>(255-response_value,i)[2] = 255;
+        // (row, col)
+        response_vis_image.at<cv::Vec3b>(255 - response_value, i)[0] = 0;
+        response_vis_image.at<cv::Vec3b>(255 - response_value, i)[1] = 0;
+        response_vis_image.at<cv::Vec3b>(255 - response_value, i)[2] = 255;
         
         //plot the inverse response
-        //response_vis_image.at<cv::Vec3b>(255-inv_response_value,i)[0] = 0;
-        //response_vis_image.at<cv::Vec3b>(255-inv_response_value,i)[1] = 0;
-        //response_vis_image.at<cv::Vec3b>(255-inv_response_value,i)[2] = 255;
+        inverse_response_vis_image.at<cv::Vec3b>(255 - inv_response_value, i)[0] = 0;
+        inverse_response_vis_image.at<cv::Vec3b>(255 - inv_response_value, i)[1] = 0;
+        inverse_response_vis_image.at<cv::Vec3b>(255 - inv_response_value, i)[2] = 255;
         
         //draw the diagonal
-        //response_vis_image.at<cv::Vec3b>(255-i,i)[0] = 255;
-        //response_vis_image.at<cv::Vec3b>(255-i,i)[1] = 255;
-        //response_vis_image.at<cv::Vec3b>(255-i,i)[2] = 255;
+        response_vis_image.at<cv::Vec3b>(255 - i, i)[0] = 0;
+        response_vis_image.at<cv::Vec3b>(255 - i, i)[1] = 0;
+        response_vis_image.at<cv::Vec3b>(255 - i, i)[2] = 0;
+
+        inverse_response_vis_image.at<cv::Vec3b>(255 - i, i)[0] = 0;
+        inverse_response_vis_image.at<cv::Vec3b>(255 - i, i)[1] = 0;
+        inverse_response_vis_image.at<cv::Vec3b>(255 - i, i)[2] = 0;
         
         // Draw a variety of GT response functions
         double x = i/255.0;
@@ -775,30 +786,38 @@ double NonlinearOptimizer::visualizeOptimizationResult(double* inverse_response)
         response_vis_image.at<cv::Vec3b>(255-dso_value,i)[1] = 255;
         response_vis_image.at<cv::Vec3b>(255-dso_value,i)[2] = 0;
         
-//        /*
-//         * Draw GT response for artificial dataset
-//         */
-//        //draw the GT response for canon EOS 600 D
-//        double artificial_value_f = pow(x,0.6-0.2*x);
-//        int artificial_value = static_cast<int>(artificial_value_f*255);
-//        if(artificial_value > 255)
-//            artificial_value = 255;
-//        response_vis_image.at<cv::Vec3b>(255-artificial_value,i)[0] = 0;
-//        response_vis_image.at<cv::Vec3b>(255-artificial_value,i)[1] = 255;
-//        response_vis_image.at<cv::Vec3b>(255-artificial_value,i)[2] = 255;
+        // /*
+        //     * Draw GT response for artificial dataset
+        //     */
+        // //draw the GT response for canon EOS 600 D
+        // double artificial_value_f = pow(x,0.6-0.2*x);
+        // int artificial_value = static_cast<int>(artificial_value_f*255);
+        // if(artificial_value > 255)
+        //     artificial_value = 255;
+        // response_vis_image.at<cv::Vec3b>(255-artificial_value,i)[0] = 0;
+        // response_vis_image.at<cv::Vec3b>(255-artificial_value,i)[1] = 255;
+        // response_vis_image.at<cv::Vec3b>(255-artificial_value,i)[2] = 255;
         
     }
     
     cv::imshow("Estimated Response", response_vis_image);
+    // cv::waitKey(0);
+    std::string response_function_saved_path = saved_path + "response_function.png";
+    cv::imwrite(response_function_saved_path, response_vis_image);
+    std::cout << "Save estimated response function to" << response_function_saved_path << std::endl;
     // TODO: move only the first time the window is created,
     //       to allow the user to move it somewhere else.
     //       Same for other calls to "moveWindow".
     cv::moveWindow("Estimated Response", 20,20);
 
+    std::string inverse_response_function_saved_path = saved_path + "inverse_response_function.png";
+    cv::imwrite(inverse_response_function_saved_path, inverse_response_vis_image);
+    std::cout << "Save estimated inverse response function to" << inverse_response_function_saved_path << std::endl;
+
     // Show the vignetting
     
     //Setup a 256x256 mat to display vignetting
-    cv::Mat vignette_vis_image(256,256,CV_8UC3,cv::Scalar(0,0,0));
+    cv::Mat vignette_vis_image(256, 256, CV_8UC3, cv::Scalar(255, 255, 255));
     for(int i = 0;i < 256;i++)
     {
         double r = i/255.0f;
@@ -832,26 +851,31 @@ double NonlinearOptimizer::visualizeOptimizationResult(double* inverse_response)
         //vignette_vis_image.at<cv::Vec3b>(235,i)[1] = 255;
         //vignette_vis_image.at<cv::Vec3b>(235,i)[2] = 255;
         
-        // Plot the vignetting for DSO sequence 47
-         double dso_vignette_47 = 0.971 + 0.1891*r - 1.5958*r_2 + 1.4473*r_2*r - 0.5143* r_4;
-         y_pos = 245 - round(235*dso_vignette_47  );
-         vignette_vis_image.at<cv::Vec3b>(y_pos,i)[0] = 255;
-         vignette_vis_image.at<cv::Vec3b>(y_pos,i)[1] = 255;
-         vignette_vis_image.at<cv::Vec3b>(y_pos,i)[2] = 0;
+        // // Plot the vignetting for DSO sequence 47
+        // double dso_vignette_47 = 0.971 + 0.1891*r - 1.5958*r_2 + 1.4473*r_2*r - 0.5143* r_4;
+        // y_pos = 245 - round(235*dso_vignette_47  );
+        // vignette_vis_image.at<cv::Vec3b>(y_pos,i)[0] = 255;
+        // vignette_vis_image.at<cv::Vec3b>(y_pos,i)[1] = 255;
+        // vignette_vis_image.at<cv::Vec3b>(y_pos,i)[2] = 0;
         
-//        // Plot the vignetting for artificial dataset
-//        double art_vignette =  0.9983-0.0204*r -0.2341*r_2 - 0.0463*r_2*r;
-//        y_pos = 245 - round(235*art_vignette  );
-//        vignette_vis_image.at<cv::Vec3b>(y_pos,i)[0] = 0;
-//        vignette_vis_image.at<cv::Vec3b>(y_pos,i)[1] = 255;
-//        vignette_vis_image.at<cv::Vec3b>(y_pos,i)[2] = 255;
+        // // Plot the vignetting for artificial dataset
+        // double art_vignette =  0.9983-0.0204*r -0.2341*r_2 - 0.0463*r_2*r;
+        // y_pos = 245 - round(235*art_vignette  );
+        // vignette_vis_image.at<cv::Vec3b>(y_pos,i)[0] = 0;
+        // vignette_vis_image.at<cv::Vec3b>(y_pos,i)[1] = 255;
+        // vignette_vis_image.at<cv::Vec3b>(y_pos,i)[2] = 255;
         
     }
     
     cv::imshow("Estimated Vignetting", vignette_vis_image);
+    std::string vignette_function_saved_path = saved_path + "vignette_function.png";
+    cv::imwrite(vignette_function_saved_path, vignette_vis_image);
+    std::cout << "Save estimated vignette function to" << vignette_function_saved_path << std::endl;
     cv::moveWindow("Estimated Vignetting", 20,20+50+256);
 
 
+    //* These estimated exposure time are backend optimized
+    //* Database part is rapid estimated  
     // Visualize exposure times 
     // If GT data is available, the estimated exposure times will be aligned 
     // to the GT by computing an optimal alignment factor alignment_alpha
@@ -998,6 +1022,14 @@ void NonlinearOptimizer::getInverseResponseRaw(double* inverse_response_function
     }
 }
 
+/**
+ * @brief Remove the exponential ambiguity by fixxing a point through the inverse response function
+ * 
+ * @param inverse_response 
+ * @param x 
+ * @param y 
+ * @return double 
+ */
 double NonlinearOptimizer::determineGammaFixResponseAt(double*inverse_response,int x,double y)
 {
     double v_y = inverse_response[x];

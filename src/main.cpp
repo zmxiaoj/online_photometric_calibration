@@ -42,6 +42,7 @@ struct Settings{
     string image_folder;        // Image folder.
     string exposure_gt_file;    // Exposure times ground truth file.
     string calibration_mode;    // Choose "online" or "batch".
+    string output_folder;       // Output folder.
 };
 
 void run_batch_optimization_task(NonlinearOptimizer *optimizer)
@@ -320,7 +321,7 @@ int run_online_calibration(Settings *run_settings,std::vector<double> gt_exp_tim
             database.m_response_estimate.setGrossbergParameterVector(backend_optimizer.m_response_estimate);
             database.m_response_estimate.setInverseResponseVector(backend_optimizer.m_raw_inverse_response);
             
-            vis_exponent = backend_optimizer.visualizeOptimizationResult(backend_optimizer.m_raw_inverse_response);
+            vis_exponent = backend_optimizer.visualizeOptimizationResult(backend_optimizer.m_raw_inverse_response, run_settings->output_folder);
         }
         
         // Try to fetch a new optimization block
@@ -344,7 +345,7 @@ int run_online_calibration(Settings *run_settings,std::vector<double> gt_exp_tim
         database.m_response_estimate.setGrossbergParameterVector(backend_optimizer.m_response_estimate);
         database.m_response_estimate.setInverseResponseVector(backend_optimizer.m_raw_inverse_response);
 
-        vis_exponent = backend_optimizer.visualizeOptimizationResult(backend_optimizer.m_raw_inverse_response);
+        vis_exponent = backend_optimizer.visualizeOptimizationResult(backend_optimizer.m_raw_inverse_response, run_settings->output_folder);
     }
     
     return 0;
@@ -370,6 +371,7 @@ int main(int argc, char** argv)
     run_settings.nr_active_frames    = 200;    
     run_settings.keyframe_spacing    = 15; 
     run_settings.min_keyframes_valid = 3;
+    run_settings.output_folder = "./results/";
 
     app.add_option("-i,--image-folder", run_settings.image_folder, "Folder with image files to read.", true);
     app.add_option("--start-image-index", run_settings.start_image_index, "Start reading from this image index.", true);
@@ -390,6 +392,7 @@ int main(int argc, char** argv)
     printf("End at index %d\n", run_settings.end_image_index);
     printf("Image width %d\n", run_settings.image_width);
     printf("Image height %d\n", run_settings.image_height);
+    printf("Save results to '%s'\n", run_settings.output_folder.c_str());
 
     // Parse gt exposure times from file if available
     // Only use the last number in each line, delimiter is the space character ' '

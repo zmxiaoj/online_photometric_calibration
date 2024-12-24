@@ -69,6 +69,11 @@ void Database::visualizeTracking()
     cv::waitKey(1);
 }
 
+/**
+ * @brief The estimated exposure time results have exponent ambiguity
+ * 
+ * @param [in ] exponent 
+ */
 void Database::visualizeRapidExposureTimeEstimates(double exponent)
 {
     // Visualize exposure times 
@@ -99,6 +104,8 @@ void Database::visualizeRapidExposureTimeEstimates(double exponent)
             min_exp = frame_exp_time;
 
         // Accumulate information for least square fit between GT and estimated exposure
+        //* Construct Least Square problem: min \Sigma^M_i ||alpha*exp_est_i - exp_gt_i||^2
+        //* Closed form solution: alpha = \Sigma^M_i exp_est_i * exp_gt_i / \Sigma^M_i exp_est_i^2
         top += frame_exp_time*frame_time_gt;
         bot += frame_exp_time*frame_exp_time;
         

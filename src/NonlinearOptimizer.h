@@ -82,8 +82,9 @@ public:
      * Show inverse response + vignette estimate
      * Returns the exponential factor that was used to align data to the ground truth
      */
-    double visualizeOptimizationResult(double* inverse_response);
-    
+    // double visualizeOptimizationResult(double* inverse_response);
+    double visualizeOptimizationResult(double* inverse_response, std::string saved_path);
+
     /**
      * Handle exponential ambiguity by fixing the response in one point, also adjusting the vignette estimate
      */
