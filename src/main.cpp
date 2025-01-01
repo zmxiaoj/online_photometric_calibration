@@ -200,7 +200,7 @@ int run_batch_calibration(Settings *run_settings,std::vector<double> gt_exp_time
             run_batch_optimization_task(&backend_optimizer);
 
             // Show optimization result
-            vis_exponent = backend_optimizer.visualizeOptimizationResult(backend_optimizer.m_raw_inverse_response);
+            vis_exponent = backend_optimizer.visualizeOptimizationResult(backend_optimizer.m_raw_inverse_response, run_settings->output_folder);
 
             // Remove frames except for some overlap in order to align exposures later
             for(int k = 0;k < run_settings->nr_active_frames-30;k++)

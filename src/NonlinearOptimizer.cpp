@@ -53,10 +53,10 @@ bool NonlinearOptimizer::extractOptimizationBlock()
     m_optimization_block->deleteExposureTimes();
     
     // Iterate through all images in the database (except the most current ones used for exposure optimization)
-    // TODO: Finish this part
     for(int i = 0;i < nr_images_in_database - m_safe_zone_size;i++)
     {
         // Only add keyframe images
+        //* Take one keyframe for each m_keyframe_spacing frame
         if(i%m_keyframe_spacing == 0)
         {
             nr_images_in_block++;
@@ -67,13 +67,14 @@ bool NonlinearOptimizer::extractOptimizationBlock()
             // Push exposure time estimate (use either the one found from rapid exposure time estimation or 1.0)
             // If 1.0 is used, then all the optimization parameters should also be initialized with the same constant values (for V,f,E,L)
             m_optimization_block->pushExposureTime(m_database->m_tracked_frames.at(i).m_exp_time,m_database->m_tracked_frames.at(i).m_gt_exp_time);
-            //m_optimization_block->pushExposureTime(1.0);
+            // m_optimization_block->pushExposureTime(1.0);
         }
         
         // Get all features in the current keyframe and iterate them
         // Todo: change features to pointer?
         std::vector<Feature*> features = m_database->m_tracked_frames.at(i).m_features;
         
+        //* Traverse all features in the current frame
         for(int p = 0;p < features.size();p++)
         {
             // Skip features that are not new, don't attempt at creating a new optimization point
@@ -83,9 +84,11 @@ bool NonlinearOptimizer::extractOptimizationBlock()
             // Find out in how many and which keyframes this point is visible
             Feature* feature_iterator = features.at(p);
             std::vector<int> keyframes_valid;
+            //* Current frame index
             int feature_iterator_image_index = i;
             
             // Track the feature forward until either we hit NULL or the feature is tracked out of the safe zone
+            //* Find the features that are tracked long enough
             while(feature_iterator != NULL && feature_iterator_image_index < nr_images_in_database-m_safe_zone_size)
             {
                 if(feature_iterator_image_index%m_keyframe_spacing == 0) //feature_iterator_image_index is a keyframe image
@@ -107,6 +110,7 @@ bool NonlinearOptimizer::extractOptimizationBlock()
             
             // Allocate new optimization point
             OptimizedPoint opt_p;
+            //* Record the start image index of the feature
             opt_p.start_image_idx = keyframes_valid.at(0);
             
             // Initialize vector for radiance estimates
@@ -153,6 +157,7 @@ bool NonlinearOptimizer::extractOptimizationBlock()
                 opt_p.xy_image_locations.push_back(feature_iterator->m_xy_location);
                 
                 // Calculate point radius
+                //* For vignetting estimation
                 double radius = m_database->m_vignette_estimate.getNormalizedRadius(feature_iterator->m_xy_location);
                 opt_p.radii.push_back(radius);
                 
@@ -190,8 +195,15 @@ bool NonlinearOptimizer::extractOptimizationBlock()
     return true;
 }
 
+/**
+ * @brief Optimize exposure time(E[e_i]), vignetting(V[v1 v2 v3]), response(F[c1 c2 c3 c4])
+ * 
+ * @param show_debug_prints 
+ * @return double 
+ */
 double NonlinearOptimizer::evfOptimization(bool show_debug_prints)
 {
+    // TODO: finish this part
     // Used for calculating first order derivatives, creating the Jacobian
     JacobianGenerator jacobian_generator;
     jacobian_generator.setResponseParameters(m_response_estimate);
@@ -521,6 +533,11 @@ void NonlinearOptimizer::getTotalResidualError(double& total_error,double& avg_e
     avg_error   = total_error/(residual_id+1);
 }
 
+/**
+ * @brief Optimize radiance of scene points(L^p)
+ * 
+ * @return double 
+ */
 double NonlinearOptimizer::radianceFullOptimization()
 {
     // Compute derivatives using this object
