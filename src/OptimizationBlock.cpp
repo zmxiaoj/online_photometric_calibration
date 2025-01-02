@@ -28,6 +28,7 @@ void OptimizationBlock::addOptimizationPoint(OptimizedPoint p)
  */
 int OptimizationBlock::getNrResiduals()
 {
+    // Total number of Residuals = \Sigma (valid_images_per_point * points_per_patch)
     int nr_residuals = 0;
     
     for(int i = 0;i < m_optimized_points.size();i++)

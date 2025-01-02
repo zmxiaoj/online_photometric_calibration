@@ -77,6 +77,16 @@ void JacobianGenerator::getRawJacobianRow(double I,
     j_I = j_I_temp;
 }
 
+/**
+ * @brief calculate the Jacobian for EVF optimization round
+ * 
+ * @param I 
+ * @param r 
+ * @param e 
+ * @param jacobian 
+ * @param image_index 
+ * @param residual_index 
+ */
 void JacobianGenerator::getJacobianRow_eca(double I,
                                            double r,
                                            double e,
@@ -101,6 +111,9 @@ void JacobianGenerator::getJacobianRow_eca(double I,
     double h_3_d = evaluateGrossbergBaseFunction(3, true, eIv);
     double h_4_d = evaluateGrossbergBaseFunction(4, true, eIv);
 
+    //* t = e * I * v 
+    //* f(t) = f_0(t) + c1*h_1(t) + c2*h_2(t) + c3*h_3(t) + c4*h_4(t)
+    //* df(t)_dt = f_0'(t) + c1*h_1'(t) + c2*h_2'(t) + c3*h_3'(t) + c4*h_4'(t)
     double deriv_value = h_0_d +
                          m_response_params.at(0)*h_1_d +
                          m_response_params.at(1)*h_2_d +
@@ -108,20 +121,36 @@ void JacobianGenerator::getJacobianRow_eca(double I,
                          m_response_params.at(3)*h_4_d;
         
     // Derive by the 4 Grossberg parameters
+    //* dr_dc1 = h_1(t)
     jacobian.at<double>(residual_index,0) = 255*evaluateGrossbergBaseFunction(1, false, eIv);
+    //* dr_dc2 = h_2(t)
     jacobian.at<double>(residual_index,1) = 255*evaluateGrossbergBaseFunction(2, false, eIv);
+    //* dr_dc3 = h_3(t)
     jacobian.at<double>(residual_index,2) = 255*evaluateGrossbergBaseFunction(3, false, eIv);
+    //* dr_dc4 = h_4(t)
     jacobian.at<double>(residual_index,3) = 255*evaluateGrossbergBaseFunction(4, false, eIv);
     
     // Derive by the 3 vignetting parameters
+    //* dr_da2 = dr_dt * dt_da2 = dr_dt * e * I * r^2
     jacobian.at<double>(residual_index,4) = 255 * deriv_value * e * I * r2;
+    //* dr_da4 = dr_dt * dt_da4 = dr_dt * e * I * r^4
     jacobian.at<double>(residual_index,5) = 255 * deriv_value * e * I * r4;
+    //* dr_da6 = dr_dt * dt_da6 = dr_dt * e * I * r^6
     jacobian.at<double>(residual_index,6) = 255 * deriv_value * e * I * r6;
         
     // Derive by exposure time
+    //* dr_de = dr_dt * dt_de = dr_dt * I * v
     jacobian.at<double>(residual_index,7+image_index) = 255 * deriv_value * (I*v);
 }
 
+/**
+ * @brief calculate the Jacobian for the Radiance optimization round
+ * 
+ * @param I 
+ * @param r 
+ * @param e 
+ * @param j_I 
+ */
 void JacobianGenerator::getJacobianRadiance(double I,double r,double e,double& j_I)
 {
     double a2 = m_vignetting_params.at(0);
@@ -147,6 +176,7 @@ void JacobianGenerator::getJacobianRadiance(double I,double r,double e,double& j
                          m_response_params.at(2)*h_3_d +
                          m_response_params.at(3)*h_4_d;
     
+    // dr_dI = dr_dt * dt_dI = dr_dt * e * v
     j_I = 255 * deriv_value * (e*v);
 }
 
@@ -239,8 +269,20 @@ double JacobianGenerator::applyGrossbergResponse(double x)
     return v0 + c1*v1 + c2*v2 + c3*v3 + c4*v4;
 }
 
+/**
+ * @brief Update response function paramters [c1 c2 c3 c4]
+ * 
+ * @param response 
+ * @return std::vector<double> 
+ */
 std::vector<double> JacobianGenerator::fitGrossbergModelToResponseVector(double* response)
 {
+    //* f(x) = f_0(x) + c1 * h_1(x) + c2 * h_2(x) + c3 * h_3(x) + c4 * h_4(x)
+    //* r = f(x) - f_0(x) = c1 * h_1(x) + c2 * h_2(x) + c3 * h_3(x) + c4 * h_4(x)
+    //* dr_dc1 = h_1(x) , dr_dc2 = h_2(x) , dr_dc3 = h_3(x) , dr_dc4 = h_4(x)
+    //* J = [dr_dc1 dr_dc2 dr_dc3 dr_dc4]
+    //* J^T * J * delta_c = J^T * r
+
     // Given a response vector, find Grossberg parameters that fit well
     cv::Mat LeftSide(4,4,CV_64F,0.0);
     cv::Mat RightSide(4,1,CV_64F,0.0);

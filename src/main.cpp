@@ -45,6 +45,11 @@ struct Settings{
     string output_folder;       // Output folder.
 };
 
+/**
+ * @brief Offline optimize
+ * 
+ * @param optimizer 
+ */
 void run_batch_optimization_task(NonlinearOptimizer *optimizer)
 {
     std::cout << "START BATCH OPTIMIZATION" << std::endl;
@@ -52,8 +57,10 @@ void run_batch_optimization_task(NonlinearOptimizer *optimizer)
     optimizer->fetchResponseVignetteFromDatabase();
 
     // Perform optimization (since its offline just do )
+    //* Round1: Optimize EVF
     optimizer->evfOptimization(false);
     std::cout << "EVF 1 DONE" << std::endl;
+    //* ROUND2: Optimize radiance
     optimizer->radianceFullOptimization();
     std::cout << "RAD 1 DONE" << std::endl;
     optimizer->evfOptimization(false);
@@ -73,6 +80,12 @@ void run_batch_optimization_task(NonlinearOptimizer *optimizer)
     std::cout << "END OPTIMIZATION" << std::endl;
 }
 
+/**
+ * @brief Online optimize
+ * 
+ * @param thread_arg 
+ * @return void* 
+ */
 void *run_optimization_task(void* thread_arg)
 {
     std::cout << "START OPTIMIZATION" << std::endl;
@@ -336,6 +349,7 @@ int run_online_calibration(Settings *run_settings,std::vector<double> gt_exp_tim
         }
     }
 
+    //* Wait for optimization thread to finish
     pthread_join(opt_thread,NULL);
 
     if(optimize_cnt > 0)

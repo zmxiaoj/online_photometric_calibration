@@ -203,7 +203,6 @@ bool NonlinearOptimizer::extractOptimizationBlock()
  */
 double NonlinearOptimizer::evfOptimization(bool show_debug_prints)
 {
-    // TODO: finish this part
     // Used for calculating first order derivatives, creating the Jacobian
     JacobianGenerator jacobian_generator;
     jacobian_generator.setResponseParameters(m_response_estimate);
@@ -211,6 +210,7 @@ double NonlinearOptimizer::evfOptimization(bool show_debug_prints)
     
     // Find maximum number of residuals
     int points_per_patch = pow(2*m_patch_size+1,2);
+    //* Get the total number of residuals, \Sigma (valid_images_per_point * points_per_patch)
     int num_residuals = m_optimization_block->getNrResiduals();
     
     // Number of parameters to optimize for (4 response, 3 vignette + exposure times)
@@ -243,6 +243,7 @@ double NonlinearOptimizer::evfOptimization(bool show_debug_prints)
             double exposure = m_optimization_block->getExposureTime(image_start_index+i);
                 
             //iterate all the points in the patch
+            //* For each point in the patch(centered at the feature)
             for(int r = 0;r < points_per_patch;r++)
             {
                 double grad_weight = points_to_optimize->at(p).grad_weights.at(i).at(r);
@@ -262,6 +263,7 @@ double NonlinearOptimizer::evfOptimization(bool show_debug_prints)
                 residual_id++;
                 
                 // Fill the Jacobian row
+                //* eca is EVF
                 jacobian_generator.getJacobianRow_eca(radiance,
                                                       radius,
                                                       exposure,
@@ -292,6 +294,7 @@ double NonlinearOptimizer::evfOptimization(bool show_debug_prints)
                 }
                     
                 // Fill the residual vector
+                //* r = f(eVL) - O
                 double residual = getResidualValue(o_value, radiance, radius, exposure);
                 Residuals.at<double>(residual_id,0) = grad_weight * residual;
                 
@@ -326,6 +329,7 @@ double NonlinearOptimizer::evfOptimization(bool show_debug_prints)
     
     // Prepare identity matrix for Levenberg-Marquardt dampening
     cv::Mat Identity = cv::Mat::eye(num_parameters, num_parameters, CV_64F);
+    //* Get the diagonal of the matrix A
     Identity = Identity.mul(A);
     
     // Backup photometric parameters in order to revert if update is not good
@@ -629,6 +633,13 @@ double NonlinearOptimizer::radianceFullOptimization()
     return avg_error;
 }
 
+/**
+ * @brief calculates the total error of each feature on all tracking images
+ * 
+ * @param p 
+ * @param r 
+ * @return double 
+ */
 double NonlinearOptimizer::getResidualErrorPoint(OptimizedPoint p,int r)
 {
     int start_image = p.start_image_idx;
@@ -1008,6 +1019,11 @@ double NonlinearOptimizer::getInverseResponseFixGamma(double* inverse_response_f
     return gamma;
 }
 
+/**
+ * @brief calculate f^{-1}(x)
+ * 
+ * @param inverse_response_function 
+ */
 void NonlinearOptimizer::getInverseResponseRaw(double* inverse_response_function)
 {
     //set boundaries of the inverse response
